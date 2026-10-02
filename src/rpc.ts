@@ -1,0 +1,48 @@
+import { Rpc } from "@opencode/plugin/rpc"
+
+const ERROR_SCHEMA = {
+  type: "object",
+  properties: { message: { type: "string" } },
+  required: ["message"],
+  additionalProperties: false,
+} as const
+
+export const RequestyBudget = Rpc.define({
+  id: "requesty-budget",
+  methods: {
+    get: {
+      // `Rpc.define` requires an input schema; an empty object is the "no input" shape.
+      input: { type: "object", additionalProperties: false },
+      output: {
+        type: "object",
+        properties: {
+          budget: {
+            type: "object",
+            properties: {
+              keyName: { type: "string" },
+              spend: { type: "number" },
+              limit: { type: "number" },
+              left: { type: "number" },
+              percent: { type: "number" },
+              limitSource: { type: "string" },
+            },
+            required: ["keyName", "spend", "limit", "left", "percent", "limitSource"],
+            additionalProperties: false,
+          },
+          fetchedAt: { type: "string" },
+          stale: { type: "boolean" },
+        },
+        required: ["budget", "fetchedAt"],
+        additionalProperties: false,
+      },
+      errors: {
+        no_credential: ERROR_SCHEMA,
+        unauthorized: ERROR_SCHEMA,
+        forbidden: ERROR_SCHEMA,
+        upstream: ERROR_SCHEMA,
+      },
+    },
+  },
+  // `Rpc.define` requires an events map; this RPC declares none.
+  events: {},
+})

@@ -1,0 +1,47 @@
+{
+  "name": "opencode-requesty-usage-plugin",
+  "version": "0.1.0",
+  "description": "Requesty monthly budget (spent, limit, left) in the OpenCode session sidebar",
+  "type": "module",
+  "license": "MIT",
+  "repository": "github:ionutale/opencode-requesty-usage-plugin",
+  "exports": {
+    ".": "./src/index.ts",
+    "./tui": "./dist/tui.js",
+    "./rpc": "./src/rpc.ts"
+  },
+  "files": [
+    "src",
+    "dist",
+    "server.ts",
+    "tui.tsx",
+    "tsconfig.json",
+    "!src/*.test.ts"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "smoke": "tsx scripts/smoke.ts",
+    "build:tui": "node scripts/build-tui.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "peerDependencies": {
+    "@opentui/core": ">=0.5.12",
+    "@opentui/solid": ">=0.5.12",
+    "solid-js": ">=1.9.0"
+  },
+  "dependencies": {
+    "@opencode/plugin": "^2.0.18"
+  },
+  "devDependencies": {
+    "@opentui/core": "^0.5.12",
+    "@opentui/solid": "^0.5.12",
+    "@types/node": "^26.6.3",
+    "solid-js": "^1.9.15",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}
