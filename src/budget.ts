@@ -1,3 +1,7 @@
+import { barSegments, percentColor, describeRpcErrorWith } from "./shared"
+
+export { barSegments, GREEN, RED, YELLOW } from "./shared"
+
 export type BudgetLimitSource = "requesty" | "config" | "none"
 
 export type BudgetView = {
@@ -28,11 +32,7 @@ export class BudgetParseError extends Error {
   }
 }
 
-export const GREEN = "#22c55e"
-export const YELLOW = "#eab308"
-export const RED = "#ef4444"
-
-export const ERROR_TEXT: Record<string, string> = {
+export const REQUESTY_ERROR_TEXT: Record<string, string> = {
   no_credential: "no API key",
   unauthorized: "check API key",
   forbidden: "permission denied",
@@ -84,17 +84,7 @@ export function formatMoney(value: number): string {
   return `${sign}$${Math.abs(value).toFixed(2)}`
 }
 
-export function barSegments(percent: number, width = 10): string {
-  const bounded = Number.isFinite(percent) ? Math.min(100, Math.max(0, percent)) : 0
-  const filled = Math.min(width, Math.max(0, Math.round((bounded / 100) * width)))
-  return "█".repeat(filled) + "░".repeat(width - filled)
-}
-
-export function budgetColor(percent: number): string {
-  if (percent >= 75) return RED
-  if (percent >= 50) return YELLOW
-  return GREEN
-}
+export const budgetColor = percentColor
 
 /** One-line text of the sidebar row, used by the smoke script and tests. */
 export function formatBudgetText(budget: BudgetView): string {
@@ -104,18 +94,5 @@ export function formatBudgetText(budget: BudgetView): string {
 
 /** Maps an RPC error to short UI text. Accepts unprefixed or `rpc.<id>.`-prefixed types. */
 export function describeRpcError(error: unknown): string {
-  const record = typeof error === "object" && error !== null ? (error as Record<string, unknown>) : undefined
-  const data =
-    typeof record?.data === "object" && record.data !== null ? (record.data as Record<string, unknown>) : undefined
-  const rawType =
-    typeof record?.type === "string" ? record.type : typeof data?.type === "string" ? data.type : undefined
-  if (rawType) {
-    const normalized = rawType.replace(/^rpc\.[^.]+\./, "")
-    const known = ERROR_TEXT[normalized]
-    if (known) return known
-  }
-  if (error instanceof Error && error.message.length > 0) return error.message
-  if (typeof record?.message === "string" && record.message.length > 0) return record.message
-  if (typeof data?.message === "string" && data.message.length > 0) return data.message
-  return ERROR_TEXT.upstream
+  return describeRpcErrorWith(error, REQUESTY_ERROR_TEXT)
 }

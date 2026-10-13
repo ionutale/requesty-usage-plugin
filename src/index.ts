@@ -1,5 +1,5 @@
 import { Plugin } from "@opencode/plugin"
-import { ERROR_TEXT } from "./budget"
+import { REQUESTY_ERROR_TEXT } from "./budget"
 import { extractApiKey } from "./key"
 import { RequestyBudget } from "./rpc"
 import { BudgetError, createBudgetService } from "./service"
@@ -33,7 +33,7 @@ export default Plugin.define({
           return await service.get(context.signal)
         } catch (error) {
           if (error instanceof BudgetError) {
-            return context.error(error.type, ERROR_TEXT[error.type] ?? error.message, { message: error.message })
+            return context.error(error.type, REQUESTY_ERROR_TEXT[error.type] ?? error.message, { message: error.message })
           }
           throw error
         }
