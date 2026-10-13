@@ -24,3 +24,15 @@ export function extractApiKey(provider: unknown): string | undefined {
 
   return undefined
 }
+
+/** Handles both a bare secret string and credential objects with a key-ish field. */
+export function extractCredentialSecret(credential: unknown): string | undefined {
+  if (typeof credential === "string" && credential.length > 0) return credential
+  if (typeof credential === "object" && credential !== null) {
+    const record = credential as Record<string, unknown>
+    for (const candidate of [record.key, record.apiKey, record.value]) {
+      if (typeof candidate === "string" && candidate.length > 0) return candidate
+    }
+  }
+  return undefined
+}

@@ -91,4 +91,49 @@ describe("createBudgetService", () => {
     })
     await expect(service.get()).rejects.toMatchObject({ type: "upstream" })
   })
+
+  it("surfaces auth errors immediately instead of stale data", async () => {
+    for (const [status, type] of [
+      [401, "unauthorized"],
+      [403, "forbidden"],
+    ] as const) {
+      let now = 0
+      let fail = false
+      const fetchMock = vi.fn(async () => jsonResponse(fail ? {} : okBody, fail ? status : 200))
+      const service = createBudgetService({ resolveKey: async () => "k", fetch: fetchMock, now: () => now })
+      await service.get()
+      fail = true
+      now += 20_000
+      await expect(service.get()).rejects.toMatchObject({ type })
+    }
+  })
+
+  it("surfaces a missing credential immediately instead of stale data", async () => {
+    let now = 0
+    let key: string | undefined = "k"
+    const service = createBudgetService({
+      resolveKey: async () => key,
+      fetch: async () => jsonResponse(okBody),
+      now: () => now,
+    })
+    await service.get()
+    key = undefined
+    now += 20_000
+    await expect(service.get()).rejects.toMatchObject({ type: "no_credential" })
+  })
+
+  it("still serves stale data after a thrown network error", async () => {
+    let now = 0
+    let fail = false
+    const fetchMock = vi.fn(async () => {
+      if (fail) throw new Error("network down")
+      return jsonResponse(okBody)
+    })
+    const service = createBudgetService({ resolveKey: async () => "k", fetch: fetchMock, now: () => now })
+    await service.get()
+    fail = true
+    now += 20_000
+    const second = await service.get()
+    expect(second.stale).toBe(true)
+  })
 })

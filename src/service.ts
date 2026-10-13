@@ -47,7 +47,7 @@ export function createBudgetService(options: BudgetServiceOptions): BudgetServic
           headers: {
             Authorization: `Bearer ${key}`,
             Accept: "application/json",
-            "User-Agent": "opencode-requesty-usage-plugin/0.1.0",
+            "User-Agent": "requesty-usage-plugin/0.2.0",
           },
           signal,
         })
@@ -69,7 +69,9 @@ export function createBudgetService(options: BudgetServiceOptions): BudgetServic
       } catch (error) {
         if (signal?.aborted) throw error
         const enriched = error instanceof BudgetError ? error : toUpstreamError(error)
-        if (cache && now() - cache.at < STALE_MAX_AGE_MS) return { ...cache.result, stale: true }
+        if (enriched.type === "upstream" && cache && now() - cache.at < STALE_MAX_AGE_MS) {
+          return { ...cache.result, stale: true }
+        }
         throw enriched
       }
     },
