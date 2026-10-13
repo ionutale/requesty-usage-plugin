@@ -1,29 +1,45 @@
-# opencode-requesty-usage-plugin
+# requesty-usage-plugin
 
-[OpenCode](https://opencode.ai) sidebar row for your [Requesty](https://requesty.ai) monthly budget.
+[OpenCode](https://opencode.ai) sidebar usage for two providers, switched by the
+model you have selected:
 
-```text
-Requesty ███████░░░  $13.95 left
-```
+- **OpenCode Go** (`opencode-go` models) — rolling, weekly, and monthly plan usage.
 
-When the API key has no monthly limit configured in Requesty, the row shows
-month-to-date spend instead:
+  ```text
+  Rolling  ████░░░░░░   40%  1h 13m
+  Weekly   ████████░░   77%  6h 9m
+  Monthly  ██████░░░░   64%  7d 16h
+  ```
 
-```text
-Requesty  $26.05 this month
-```
+- **Requesty** (`requesty` models) — monthly budget spend and what's left.
+
+  ```text
+  Requesty ███████░░░  $13.95 left
+  ```
+
+  When the API key has no monthly limit configured in Requesty, the row shows
+  month-to-date spend instead:
+
+  ```text
+  Requesty  $26.05 this month
+  ```
+
+Any other provider (Ollama, the `opencode` provider, …) renders nothing. The
+widget follows the selected model live, shows a loading state while switching,
+and only polls the source currently on screen.
 
 ## Requirements
 
 - OpenCode V2
-- A Requesty provider configured in `opencode.json(c)` with an API key
-  (e.g. `provider.requesty.options.apiKey`)
+- For Go usage: OpenCode Go connected (the `opencode-go` integration)
+- For Requesty: a `requesty` provider configured with an API key in
+  `opencode.json(c)`
 - About 32 columns of sidebar width
 
 ## Install
 
 ```sh
-opencode plugin add github:ionutale/opencode-requesty-usage-plugin
+opencode plugin add github:ionutale/requesty-usage-plugin
 ```
 
 Or add it to the `plugins` list in `opencode.json(c)`:
@@ -31,7 +47,7 @@ Or add it to the `plugins` list in `opencode.json(c)`:
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": ["github:ionutale/opencode-requesty-usage-plugin"],
+  "plugins": ["github:ionutale/requesty-usage-plugin"],
 }
 ```
 
@@ -41,10 +57,10 @@ Or add it to the `plugins` list in `opencode.json(c)`:
 {
   "plugins": [
     {
-      "package": "github:ionutale/opencode-requesty-usage-plugin",
+      "package": "github:ionutale/requesty-usage-plugin",
       "options": {
-        "providerID": "requesty", // provider to read the API key from (default "requesty")
-        "budget": 30,             // USD budget used when the key has no monthly limit
+        "providerID": "requesty", // provider to read the Requesty API key from (default "requesty")
+        "budget": 30,             // USD budget used when the Requesty key has no monthly limit
       },
     },
   ],
@@ -55,29 +71,35 @@ Or add it to the `plugins` list in `opencode.json(c)`:
 
 | Sidebar shows | Meaning |
 | - | - |
-| `Requesty ███████░░░  $13.95 left` | The key has a monthly limit (set in Requesty or via the `budget` option). Bar = percent used; green < 50%, yellow 50–74%, red ≥ 75%. |
-| `Requesty  $26.05 this month` | The key has no monthly limit; only month-to-date spend is known. |
-| `Requesty: no API key` | No Requesty provider/API key found. Check the `providerID` option. |
-| `Requesty: check API key` | Requesty rejected the key (HTTP 401). |
-| `Requesty: permission denied` | Requesty denied usage access for the key (HTTP 403). |
-| `Requesty: unreachable` | Network or API problem with no usable cached data. |
-| Dimmed values | Showing the last successful fetch (up to 5 minutes) after a failed refresh. |
+| `Rolling ████░░░░░░  40%  1h 13m` | Go short-term burst limit; counts down to its reset |
+| `Weekly ████████░░  77%  6h 9m` | Go weekly allotment; counts down to the weekly boundary |
+| `Monthly ██████░░░░  64%  7d 16h` | Go monthly allotment; counts down to the subscription reset |
+| `Requesty ███████░░░  $13.95 left` | Requesty monthly limit (from Requesty or the `budget` option); bar = percent used |
+| `Requesty  $26.05 this month` | Requesty key has no monthly limit; spend only |
+| `Requesty: no API key` | No Requesty provider/API key found. Check the `providerID` option |
+| `Requesty: check API key` | Requesty rejected the key (HTTP 401) |
+| `Requesty: permission denied` | Requesty denied usage access for the key (HTTP 403) |
+| `Go usage: not connected` | OpenCode Go is not connected |
+| `Go usage: check API key` | The Go usage API rejected the key (HTTP 401) |
+| `Go usage: Go plan required` | The key has no Go subscription (HTTP 403) |
+| `…: unreachable` | Network or API problem with no usable cached data |
+| Dimmed values | Showing the last successful fetch (up to 5 minutes) after a failed refresh |
 
 ## How it works
 
 ```text
-TUI (sidebar slot) ──RPC──▶ server plugin ──HTTPS──▶ api-v2.requesty.ai
+TUI (sidebar slot) ──RPC──▶ server plugin ──HTTPS──▶ opencode.ai / api-v2.requesty.ai
 ```
 
-- The **server plugin** reads the Requesty API key from the provider
-  configuration (`ctx.provider.get`), calls
-  `GET https://api-v2.requesty.ai/v1/manage/apikey/self`, and caches the result
-  for 15 seconds. Your API key is never exposed to the TUI and is never written
-  to logs.
-- The **TUI plugin** calls the typed RPC method `get` (id `requesty-budget`)
-  every 30 seconds and renders `sidebar.footer`.
-- `monthly_spend` / `monthly_limit` are Requesty's own numbers for the current
-  month; `monthly_limit` of `0` means unlimited.
+- The **server plugin** registers two RPCs: `go-usage` (credential from the
+  `opencode-go` integration, `GET https://opencode.ai/zen/go/v1/usage`) and
+  `requesty-budget` (API key from the provider config,
+  `GET https://api-v2.requesty.ai/v1/manage/apikey/self`). Both cache for
+  15 seconds and serve stale data for up to 5 minutes. Credentials never reach
+  the TUI and are never written to logs.
+- The **TUI plugin** reads the selected model's provider
+  (`context.ui.model.current()`), renders the matching block in `sidebar.footer`,
+  and polls only that source every 30 seconds.
 
 ## Development
 
@@ -86,12 +108,10 @@ pnpm install
 pnpm test        # unit tests
 pnpm typecheck   # tsc --noEmit
 pnpm build:tui   # rebuild dist/tui.js after editing src/tui.tsx
-pnpm smoke       # live call; uses REQUESTY_API_KEY or your opencode.json key
+pnpm smoke       # live Requesty call; uses REQUESTY_API_KEY or your opencode.json key
+pnpm smoke:go    # live OpenCode Go call; uses OPENCODE_API_KEY or your auth.json
 ```
 
 The published `./tui` entry is the prebuilt `dist/tui.js`. OpenTUI's Solid
 plugin does not compile JSX inside `node_modules`, so packaged installs need
 this prebuilt file.
-
-To test a local checkout, add its path to the `plugins` list of your global
-`opencode.json(c)`, run `opencode service restart`, and open a session.

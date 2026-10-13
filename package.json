@@ -1,10 +1,10 @@
 {
-  "name": "opencode-requesty-usage-plugin",
-  "version": "0.1.0",
-  "description": "Requesty monthly budget (spent, limit, left) in the OpenCode session sidebar",
+  "name": "requesty-usage-plugin",
+  "version": "0.2.0",
+  "description": "OpenCode Go usage and Requesty budget in the session sidebar, switched by the selected model",
   "type": "module",
   "license": "MIT",
-  "repository": "github:ionutale/opencode-requesty-usage-plugin",
+  "repository": "github:ionutale/requesty-usage-plugin",
   "exports": {
     ".": "./src/index.ts",
     "./tui": "./dist/tui.js",
