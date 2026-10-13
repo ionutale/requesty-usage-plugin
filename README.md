@@ -44,7 +44,7 @@ Or add it to the `plugins` list in `opencode.json(c)`:
       "package": "github:ionutale/opencode-requesty-usage-plugin",
       "options": {
         "providerID": "requesty", // provider to read the API key from (default "requesty")
-        "budget": 40,             // USD budget used when the key has no monthly limit
+        "budget": 30,             // USD budget used when the key has no monthly limit
       },
     },
   ],
