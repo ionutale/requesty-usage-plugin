@@ -22,6 +22,7 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "smoke": "tsx scripts/smoke.ts",
+    "smoke:go": "tsx scripts/smoke-go.ts",
     "build:tui": "node scripts/build-tui.mjs"
   },
   "engines": {
