@@ -12,4 +12,18 @@ describe("selectSource", () => {
     expect(selectSource("opencode")).toBeUndefined()
     expect(selectSource(undefined)).toBeUndefined()
   })
+
+  it("maps a custom requesty provider id to the requesty source", () => {
+    expect(selectSource("my-requesty", "my-requesty")).toBe("requesty")
+  })
+
+  it("still maps the default requesty provider id to the requesty source", () => {
+    expect(selectSource("requesty", "requesty")).toBe("requesty")
+    expect(selectSource("requesty")).toBe("requesty")
+  })
+
+  it("returns undefined for a provider id that is neither the custom id nor opencode-go", () => {
+    expect(selectSource("requesty", "my-requesty")).toBeUndefined()
+    expect(selectSource("other", "my-requesty")).toBeUndefined()
+  })
 })

@@ -18,17 +18,11 @@ import {
 import { GoUsage, RequestyBudget } from "./rpc"
 import { barSegments } from "./shared"
 import { selectSource, type UsageSource } from "./source"
+import { errorState, initialState, isCurrent, okState, type ViewState } from "./view"
 
 const REFRESH_MS = 30_000
 const TICK_MS = 30_000
 const REQUEST_TIMEOUT_MS = 15_000
-
-type ViewState =
-  | { phase: "idle" }
-  | { phase: "loading"; source: UsageSource }
-  | { phase: "requesty"; result: BudgetResult }
-  | { phase: "go"; result: UsageResult }
-  | { phase: "error"; source: UsageSource; text: string }
 
 function sourceLabel(source: UsageSource): string {
   return source === "requesty" ? "Requesty" : "Go usage"
@@ -42,33 +36,35 @@ export default Plugin.define({
     const [state, setState] = createSignal<ViewState>({ phase: "idle" })
     const [now, setNow] = createSignal(Date.now())
 
-    const source = createMemo(() => selectSource(context.ui.model.current()?.providerID))
+    const requestyProviderID =
+      typeof context.options.providerID === "string" && context.options.providerID.length > 0
+        ? context.options.providerID
+        : "requesty"
+
+    const source = createMemo(() => selectSource(context.ui.model.current()?.providerID, requestyProviderID))
 
     createEffect(() => {
       const active = source()
-      if (!active) {
-        setState({ phase: "idle" })
-        return
-      }
+      setState(initialState(active))
+      if (!active) return
 
-      setState({ phase: "loading", source: active })
       const location = context.location ?? context.data.location.default()
 
       const refresh = async () => {
         try {
           if (active === "requesty") {
             const result = await requestyRpc.get({}, { location, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
-            if (source() !== active) return
-            setState({ phase: "requesty", result: result as BudgetResult })
+            if (!isCurrent(active, source())) return
+            setState(okState(active, result as BudgetResult))
           } else {
             const result = await goRpc.get({}, { location, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) })
-            if (source() !== active) return
-            setState({ phase: "go", result: result as UsageResult })
+            if (!isCurrent(active, source())) return
+            setState(okState(active, result as UsageResult))
           }
         } catch (error) {
-          if (source() !== active) return
+          if (!isCurrent(active, source())) return
           const text = (active === "requesty" ? describeRequestyError : describeGoError)(error)
-          setState({ phase: "error", source: active, text })
+          setState(errorState(active, text))
         }
       }
 

@@ -4,8 +4,8 @@
   Chosen from the selected model's provider (`src/source.ts`).
 - **Selected model** — the model of the current prompt, read reactively from
   `context.ui.model.current()`. Its `providerID` picks the source.
-- **Window** — a Go usage allowance with a name, a used percent, and a reset
-  time: `rolling` (burst), `weekly`, `monthly`. See `UsageWindow`.
+- **Window** — a Go usage allowance shaped as `{ status, percent, resetsAt }`,
+  keyed by `rolling` (burst), `weekly`, `monthly`. See `UsageWindow`.
 - **Budget** — Requesty's monthly spend figures for an API key:
   `spend`, `limit`, `left`, `percent`. `limitSource` says where the denominator
   came from: `requesty` (key has a monthly limit), `config` (the plugin's

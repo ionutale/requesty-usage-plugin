@@ -13,6 +13,7 @@ import { describeRpcError as describeGoError, formatResetsIn, usageColor } from 
 import { GoUsage, RequestyBudget } from "../src/rpc.ts";
 import { barSegments } from "../src/shared.ts";
 import { selectSource } from "../src/source.ts";
+import { errorState, initialState, isCurrent, okState } from "../src/view.ts";
 const REFRESH_MS = 30_000;
 const TICK_MS = 30_000;
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -28,19 +29,12 @@ export default Plugin.define({
       phase: "idle"
     });
     const [now, setNow] = createSignal(Date.now());
-    const source = createMemo(() => selectSource(context.ui.model.current()?.providerID));
+    const requestyProviderID = typeof context.options.providerID === "string" && context.options.providerID.length > 0 ? context.options.providerID : "requesty";
+    const source = createMemo(() => selectSource(context.ui.model.current()?.providerID, requestyProviderID));
     createEffect(() => {
       const active = source();
-      if (!active) {
-        setState({
-          phase: "idle"
-        });
-        return;
-      }
-      setState({
-        phase: "loading",
-        source: active
-      });
+      setState(initialState(active));
+      if (!active) return;
       const location = context.location ?? context.data.location.default();
       const refresh = async () => {
         try {
@@ -49,30 +43,20 @@ export default Plugin.define({
               location,
               signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
             });
-            if (source() !== active) return;
-            setState({
-              phase: "requesty",
-              result: result
-            });
+            if (!isCurrent(active, source())) return;
+            setState(okState(active, result));
           } else {
             const result = await goRpc.get({}, {
               location,
               signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
             });
-            if (source() !== active) return;
-            setState({
-              phase: "go",
-              result: result
-            });
+            if (!isCurrent(active, source())) return;
+            setState(okState(active, result));
           }
         } catch (error) {
-          if (source() !== active) return;
+          if (!isCurrent(active, source())) return;
           const text = (active === "requesty" ? describeRequestyError : describeGoError)(error);
-          setState({
-            phase: "error",
-            source: active,
-            text
-          });
+          setState(errorState(active, text));
         }
       };
       void refresh();

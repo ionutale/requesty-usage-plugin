@@ -34,7 +34,7 @@ and only polls the source currently on screen.
 - For Go usage: OpenCode Go connected (the `opencode-go` integration)
 - For Requesty: a `requesty` provider configured with an API key in
   `opencode.json(c)`
-- About 32 columns of sidebar width
+- About 34 columns of sidebar width
 
 ## Install
 
@@ -83,7 +83,7 @@ Or add it to the `plugins` list in `opencode.json(c)`:
 | `Go usage: check API key` | The Go usage API rejected the key (HTTP 401) |
 | `Go usage: Go plan required` | The key has no Go subscription (HTTP 403) |
 | `…: unreachable` | Network or API problem with no usable cached data |
-| Dimmed values | Showing the last successful fetch (up to 5 minutes) after a failed refresh |
+| Dimmed values | Showing the last successful fetch (up to 5 minutes) after a transient/upstream failure; credential errors (`no API key`, `check API key`, `permission denied`) surface immediately |
 
 ## How it works
 
@@ -95,7 +95,9 @@ TUI (sidebar slot) ──RPC──▶ server plugin ──HTTPS──▶ opencod
   `opencode-go` integration, `GET https://opencode.ai/zen/go/v1/usage`) and
   `requesty-budget` (API key from the provider config,
   `GET https://api-v2.requesty.ai/v1/manage/apikey/self`). Both cache for
-  15 seconds and serve stale data for up to 5 minutes. Credentials never reach
+  15 seconds and, on a transient/upstream failure only, serve stale data for up
+  to 5 minutes; `no_credential`, `unauthorized`, and `forbidden` surface
+  immediately instead of falling back to stale data. Credentials never reach
   the TUI and are never written to logs.
 - The **TUI plugin** reads the selected model's provider
   (`context.ui.model.current()`), renders the matching block in `sidebar.footer`,
