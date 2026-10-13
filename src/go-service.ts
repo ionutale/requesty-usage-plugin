@@ -65,7 +65,9 @@ export function createGoUsageService(options: GoUsageServiceOptions): GoUsageSer
       } catch (error) {
         if (signal?.aborted) throw error
         const enriched = error instanceof GoUsageError ? error : toUpstreamError(error)
-        if (cache && now() - cache.at < GO_STALE_MAX_AGE_MS) return { ...cache.result, stale: true }
+        if (enriched.type === "upstream" && cache && now() - cache.at < GO_STALE_MAX_AGE_MS) {
+          return { ...cache.result, stale: true }
+        }
         throw enriched
       }
     },
